@@ -614,8 +614,10 @@ function changeDirection(event) {
     // 空格键功能：开始游戏或暂停/继续
     if (keyPressed === ' ') {
         if (gameOver || startScreen.classList.contains('hidden') === false) {
-            // 游戏未开始或已结束，按空格开始游戏
-            startGame();
+            // 游戏未开始或已结束 0.05秒延时后开始游戏 按空格开始游戏
+            setTimeout(() => {
+                startGame();
+            }, 50);
         } else {
             // 游戏进行中，按空格暂停/继续
             togglePause();

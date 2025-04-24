@@ -1,5 +1,4 @@
  # 贪吃蛇网页游戏
- test
 
 这是一个使用HTML、CSS和JavaScript开发的经典贪吃蛇网页游戏。
 
