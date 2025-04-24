@@ -741,11 +741,11 @@ function toggleMultiplayerMode() {
     if (isMultiplayer) {
         startScreenText.innerHTML = `玩家1：${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制<br>玩家2：${keyConfig.player2.up}/${keyConfig.player2.left}/${keyConfig.player2.down}/${keyConfig.player2.right}键控制`;
         score2Container.style.display = 'block';
-        resetGame();
+        window.onload = init;
     } else {
         startScreenText.innerHTML = `使用${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制蛇的移动`;
         score2Container.style.display = 'none';
-        resetGame();
+        window.onload = init;
     }
 }
 
