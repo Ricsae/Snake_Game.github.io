@@ -47,6 +47,11 @@ let nextDirection2 = 'left';
 let lastRenderTime = 0;
 let isMultiplayer = false; // 是否为双人模式
 
+// 添加按键缓冲队列
+let keyBuffer = [];
+let keyBuffer2 = [];
+const KEY_BUFFER_MAX_SIZE = 3; // 缓冲队列最大长度
+
 // DOM元素
 const gameCanvas = document.getElementById('gameCanvas');
 const scoreElement = document.getElementById('score');
@@ -148,6 +153,10 @@ function resetGame() {
     score2 = 0;
     scoreElement.textContent = score;
     score2Element.textContent = score2;
+    
+    // 清空按键缓冲队列
+    keyBuffer = [];
+    keyBuffer2 = [];
     
     // 创建初始蛇身
     const centerX = Math.floor((canvas.width / GRID_SIZE) / 2);
@@ -259,6 +268,18 @@ function drawSnakeSegment(segment, fillColor, strokeColor) {
 
 // 移动蛇
 function moveSnake() {
+    // 从缓冲队列中获取下一个方向
+    if (keyBuffer.length > 0) {
+        const nextDir = keyBuffer.shift();
+        // 确保不会直接反向
+        if ((nextDir === 'up' && direction !== 'down') ||
+            (nextDir === 'down' && direction !== 'up') ||
+            (nextDir === 'left' && direction !== 'right') ||
+            (nextDir === 'right' && direction !== 'left')) {
+            nextDirection = nextDir;
+        }
+    }
+    
     // 更新方向
     direction = nextDirection;
     
@@ -327,6 +348,18 @@ function moveSnake() {
 
 // 移动第二条蛇
 function moveSnake2() {
+    // 从缓冲队列中获取下一个方向
+    if (keyBuffer2.length > 0) {
+        const nextDir = keyBuffer2.shift();
+        // 确保不会直接反向
+        if ((nextDir === 'up' && direction2 !== 'down') ||
+            (nextDir === 'down' && direction2 !== 'up') ||
+            (nextDir === 'left' && direction2 !== 'right') ||
+            (nextDir === 'right' && direction2 !== 'left')) {
+            nextDirection2 = nextDir;
+        }
+    }
+    
     // 更新方向
     direction2 = nextDirection2;
     
@@ -581,32 +614,49 @@ function changeDirection(event) {
     
     // 玩家1控制
     if (keyPressed === keyConfig.player1.up) {
-        if (direction !== 'down') nextDirection = 'up';
+        if (direction !== 'down') {
+            // 将新方向添加到缓冲队列
+            addToKeyBuffer('up');
+        }
         event.preventDefault();
     } else if (keyPressed === keyConfig.player1.down) {
-        if (direction !== 'up') nextDirection = 'down';
+        if (direction !== 'up') {
+            addToKeyBuffer('down');
+        }
         event.preventDefault();
     } else if (keyPressed === keyConfig.player1.left) {
-        if (direction !== 'right') nextDirection = 'left';
+        if (direction !== 'right') {
+            addToKeyBuffer('left');
+        }
         event.preventDefault();
     } else if (keyPressed === keyConfig.player1.right) {
-        if (direction !== 'left') nextDirection = 'right';
+        if (direction !== 'left') {
+            addToKeyBuffer('right');
+        }
         event.preventDefault();
     }
     
     // 玩家2控制（仅在双人模式下）
     if (isMultiplayer) {
         if (keyPressed === keyConfig.player2.up) {
-            if (direction2 !== 'down') nextDirection2 = 'up';
+            if (direction2 !== 'down') {
+                addToKeyBuffer2('up');
+            }
             event.preventDefault();
         } else if (keyPressed === keyConfig.player2.down) {
-            if (direction2 !== 'up') nextDirection2 = 'down';
+            if (direction2 !== 'up') {
+                addToKeyBuffer2('down');
+            }
             event.preventDefault();
         } else if (keyPressed === keyConfig.player2.left) {
-            if (direction2 !== 'right') nextDirection2 = 'left';
+            if (direction2 !== 'right') {
+                addToKeyBuffer2('left');
+            }
             event.preventDefault();
         } else if (keyPressed === keyConfig.player2.right) {
-            if (direction2 !== 'left') nextDirection2 = 'right';
+            if (direction2 !== 'left') {
+                addToKeyBuffer2('right');
+            }
             event.preventDefault();
         }
     }
@@ -614,10 +664,12 @@ function changeDirection(event) {
     // 空格键功能：开始游戏或暂停/继续
     if (keyPressed === ' ') {
         if (gameOver || startScreen.classList.contains('hidden') === false) {
-            // 游戏未开始或已结束 0.05秒延时后开始游戏 按空格开始游戏
+            // 游戏未开始或已结束，按空格开始游戏
+            // 添加0.05秒延时后开始游戏
             setTimeout(() => {
                 startGame();
             }, 50);
+            startGame();
         } else {
             // 游戏进行中，按空格暂停/继续
             togglePause();
@@ -626,23 +678,49 @@ function changeDirection(event) {
     }
 }
 
-// 通过屏幕按钮改变方向
+// 添加按键到缓冲队列的函数
+function addToKeyBuffer(newDirection) {
+    // 如果缓冲区为空或者最后一个方向与新方向不同，才添加
+    if (keyBuffer.length === 0 || keyBuffer[keyBuffer.length - 1] !== newDirection) {
+        keyBuffer.push(newDirection);
+        // 保持缓冲区不超过最大长度
+        if (keyBuffer.length > KEY_BUFFER_MAX_SIZE) {
+            keyBuffer.shift(); // 移除最旧的方向
+        }
+    }
+}
+
+// 玩家2的按键缓冲函数
+function addToKeyBuffer2(newDirection) {
+    if (keyBuffer2.length === 0 || keyBuffer2[keyBuffer2.length - 1] !== newDirection) {
+        keyBuffer2.push(newDirection);
+        if (keyBuffer2.length > KEY_BUFFER_MAX_SIZE) {
+            keyBuffer2.shift();
+        }
+    }
+}
+
+// 为触屏按钮添加缓冲支持
 function changeDirectionButton(newDirection) {
     if (isPaused) return;
     
-    switch(newDirection) {
-        case 'up':
-            if (direction !== 'down') nextDirection = 'up';
-            break;
-        case 'down':
-            if (direction !== 'up') nextDirection = 'down';
-            break;
-        case 'left':
-            if (direction !== 'right') nextDirection = 'left';
-            break;
-        case 'right':
-            if (direction !== 'left') nextDirection = 'right';
-            break;
+    // 根据当前模式决定控制哪条蛇
+    if (!isMultiplayer) {
+        // 单人模式
+        if ((newDirection === 'up' && direction !== 'down') ||
+            (newDirection === 'down' && direction !== 'up') ||
+            (newDirection === 'left' && direction !== 'right') ||
+            (newDirection === 'right' && direction !== 'left')) {
+            addToKeyBuffer(newDirection);
+        }
+    } else {
+        // 双人模式下，屏幕按钮控制玩家1
+        if ((newDirection === 'up' && direction !== 'down') ||
+            (newDirection === 'down' && direction !== 'up') ||
+            (newDirection === 'left' && direction !== 'right') ||
+            (newDirection === 'right' && direction !== 'left')) {
+            addToKeyBuffer(newDirection);
+        }
     }
 }
 
@@ -663,13 +741,12 @@ function toggleMultiplayerMode() {
     if (isMultiplayer) {
         startScreenText.innerHTML = `玩家1：${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制<br>玩家2：${keyConfig.player2.up}/${keyConfig.player2.left}/${keyConfig.player2.down}/${keyConfig.player2.right}键控制`;
         score2Container.style.display = 'block';
+        resetGame();
     } else {
         startScreenText.innerHTML = `使用${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制蛇的移动`;
         score2Container.style.display = 'none';
+        resetGame();
     }
-    
-    // 重置游戏
-    resetGame();
 }
 
 // 打开键位配置面板
