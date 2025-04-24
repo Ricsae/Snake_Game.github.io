@@ -733,6 +733,7 @@ function togglePause() {
 
 // 切换多人模式
 function toggleMultiplayerMode() {
+    // 切换模式
     isMultiplayer = !isMultiplayer;
     modeToggleButton.textContent = isMultiplayer ? '切换单人模式' : '切换双人模式';
     
@@ -741,12 +742,35 @@ function toggleMultiplayerMode() {
     if (isMultiplayer) {
         startScreenText.innerHTML = `玩家1：${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制<br>玩家2：${keyConfig.player2.up}/${keyConfig.player2.left}/${keyConfig.player2.down}/${keyConfig.player2.right}键控制`;
         score2Container.style.display = 'block';
-        window.onload = init;
     } else {
         startScreenText.innerHTML = `使用${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制蛇的移动`;
         score2Container.style.display = 'none';
-        window.onload = init;
     }
+    
+    // 清空画布
+    if (ctx) {
+        clearCanvas();
+    }
+    
+    // 停止当前游戏
+    if (gameInterval) {
+        clearInterval(gameInterval);
+    }
+    
+    // 重置游戏状态
+    gameOver = false;
+    isPaused = false;
+    
+    // 显示开始界面
+    startScreen.classList.remove('hidden');
+    gameOverScreen.classList.add('hidden');
+    pauseIndicator.classList.add('hidden');
+    
+    // 移除玩家死亡提示（如果存在）
+    const player1DeadMessage = document.getElementById('player1DeadMessage');
+    const player2DeadMessage = document.getElementById('player2DeadMessage');
+    if (player1DeadMessage) player1DeadMessage.remove();
+    if (player2DeadMessage) player2DeadMessage.remove();
 }
 
 // 打开键位配置面板
