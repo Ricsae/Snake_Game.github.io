@@ -1,944 +1,1073 @@
-// 游戏常量
-const GRID_SIZE = 20; // 网格大小
-const GAME_SPEED = 150; // 初始速度（毫秒）
-const CANVAS_BORDER_COLOR = '#2196F3';
-const CANVAS_BACKGROUND_COLOR = '#e3f2fd';
-const SNAKE_COLOR = '#4CAF50';
-const SNAKE_BORDER_COLOR = '#388E3C';
-const SNAKE2_COLOR = '#9C27B0'; // 第二条蛇的颜色
-const SNAKE2_BORDER_COLOR = '#7B1FA2'; // 第二条蛇边框颜色
-const FOOD_COLOR = '#FF5722';
-const FOOD_BORDER_COLOR = '#E64A19';
-
-// 键位配置
-let keyConfig = {
-    player1: {
-        up: 'ArrowUp',
-        down: 'ArrowDown',
-        left: 'ArrowLeft',
-        right: 'ArrowRight'
-    },
-    player2: {
-        up: 'w',
-        down: 's',
-        left: 'a',
-        right: 'd'
-    }
-};
-
-// 从localStorage加载键位配置
-if (localStorage.getItem('keyConfig')) {
-    keyConfig = JSON.parse(localStorage.getItem('keyConfig'));
+var score = 0;
+var gameMode = '';
+var highScore = localStorage.getItem('snakeHighScore') || 0;
+var gameRunning = true;
+function startGame(mode) {
+	gameMode = mode;
+	document.getElementById('menu').style.display = 'none';
+	document.getElementById('scoreBoard').style.display = 'block';
+	document.getElementById('gameMode').textContent = mode === 'normal' ? '普通模式' : '挑战模式';
+	g.setState("play");
 }
 
-// 游戏变量
-let canvas, ctx;
-let snake, snake2, food;
-let score = 0;
-let score2 = 0;
-let highScore = localStorage.getItem('snakeHighScore') || 0;
-let gameInterval;
-let isPaused = false;
-let gameOver = false;
-let direction = 'right';
-let direction2 = 'left';
-let nextDirection = 'right';
-let nextDirection2 = 'left';
-let lastRenderTime = 0;
-let isMultiplayer = false; // 是否为双人模式
-
-// 添加按键缓冲队列
-let keyBuffer = [];
-let keyBuffer2 = [];
-const KEY_BUFFER_MAX_SIZE = 3; // 缓冲队列最大长度
-
-// DOM元素
-const gameCanvas = document.getElementById('gameCanvas');
-const scoreElement = document.getElementById('score');
-const highScoreElement = document.getElementById('highScore');
-const finalScoreElement = document.getElementById('finalScore');
-const startButton = document.getElementById('startButton');
-const restartButton = document.getElementById('restartButton');
-const pauseButton = document.getElementById('pauseButton');
-const gameOverScreen = document.getElementById('gameOverScreen');
-const startScreen = document.getElementById('startScreen');
-const pauseIndicator = document.getElementById('pauseIndicator');
-const upButton = document.getElementById('upButton');
-const downButton = document.getElementById('downButton');
-const leftButton = document.getElementById('leftButton');
-const rightButton = document.getElementById('rightButton');
-
-// 创建模式切换按钮和自定义键位按钮
-const modeToggleButton = document.createElement('button');
-modeToggleButton.id = 'modeToggleButton';
-modeToggleButton.textContent = '切换双人模式';
-modeToggleButton.style.marginTop = '10px';
-
-const keyConfigButton = document.createElement('button');
-keyConfigButton.id = 'keyConfigButton';
-keyConfigButton.textContent = '自定义键位';
-keyConfigButton.style.marginTop = '10px';
-
-// 创建游戏中重开按钮
-const restartInGameButton = document.createElement('button');
-restartInGameButton.id = 'restartInGameButton';
-restartInGameButton.textContent = '重新开始';
-restartInGameButton.style.marginTop = '10px';
-
-// 创建第二个玩家分数显示
-const score2Container = document.createElement('div');
-score2Container.className = 'score2-container';
-score2Container.innerHTML = '<span>玩家2分数：</span><span id="score2">0</span>';
-score2Container.style.display = 'none';
-
-const score2Element = document.createElement('span');
-score2Element.id = 'score2';
-score2Element.textContent = '0';
-
-// 初始化游戏
-function init() {
-    canvas = gameCanvas;
-    ctx = canvas.getContext('2d');
-    
-    // 校正Canvas的高度，保持正方形
-    canvas.height = canvas.width;
-    
-    // 初始化分数显示
-    highScoreElement.textContent = highScore;
-    
-    // 添加事件监听器
-    document.addEventListener('keydown', changeDirection);
-    startButton.addEventListener('click', startGame);
-    restartButton.addEventListener('click', restartGame);
-    pauseButton.addEventListener('click', togglePause);
-    
-    // 添加移动设备按钮事件
-    upButton.addEventListener('click', () => changeDirectionButton('up'));
-    downButton.addEventListener('click', () => changeDirectionButton('down'));
-    leftButton.addEventListener('click', () => changeDirectionButton('left'));
-    rightButton.addEventListener('click', () => changeDirectionButton('right'));
-    
-    // 添加模式切换按钮、自定义键位按钮和游戏中重开按钮
-    const controlsDiv = document.querySelector('.controls');
-    controlsDiv.parentNode.insertBefore(modeToggleButton, controlsDiv.nextSibling);
-    controlsDiv.parentNode.insertBefore(keyConfigButton, modeToggleButton.nextSibling);
-    controlsDiv.parentNode.insertBefore(restartInGameButton, keyConfigButton.nextSibling);
-    
-    // 添加第二个玩家分数显示
-    const gameInfoDiv = document.querySelector('.game-info');
-    gameInfoDiv.appendChild(score2Container);
-    
-    // 添加模式切换、键位配置和游戏中重开事件监听器
-    modeToggleButton.addEventListener('click', toggleMultiplayerMode);
-    keyConfigButton.addEventListener('click', openKeyConfig);
-    restartInGameButton.addEventListener('click', restartGameInProgress);
-    
-    // 显示开始界面
-    startScreen.classList.remove('hidden');
+function updateScoreBoard(current) {
+	document.getElementById('currentScore').textContent = current;
+	if (current > highScore) {
+		highScore = current;
+		localStorage.setItem('snakeHighScore', highScore);
+	}
+	document.getElementById('highScore').textContent = highScore;
 }
 
-// 开始游戏
-function startGame() {
-    startScreen.classList.add('hidden');
-    gameOverScreen.classList.add('hidden');
-    
-    resetGame();
-    gameLoop();
+function showMenu() {
+	document.getElementById('menu').style.display = 'flex';
+	document.getElementById('scoreBoard').style.display = 'none';
+}
+// 为返回主界面按钮添加点击事件
+document.addEventListener('DOMContentLoaded', function() {
+	const returnButton = document.getElementById('return-to-menu');
+	if (returnButton) {
+		returnButton.addEventListener('click', function() {
+			const gameOverPopup = document.getElementById('game-over-popup');
+			gameOverPopup.classList.add('hidden');
+			showMenu();
+			gameRunning = true; // 添加这一行
+			g.setState("play");
+		});
+	}
+});
+// 在全局作用域定义一个函数用于显示游戏结束弹窗
+function showGameOverPopup(snake) {
+	const gameOverPopup = document.getElementById('game-over-popup');
+	const currentScoreSpan = document.getElementById('current-score-popup');
+	const highScoreSpan = document.getElementById('high-score-popup');
+	// 使用传入的snake实例获取分数
+	currentScoreSpan.textContent = snake.parentState.score;
+	highScoreSpan.textContent = highScore;
+	gameOverPopup.classList.remove('hidden');
 }
 
-// 重置游戏状态
-function resetGame() {
-    // 重置分数
-    score = 0;
-    score2 = 0;
-    scoreElement.textContent = score;
-    score2Element.textContent = score2;
-    
-    // 清空按键缓冲队列
-    keyBuffer = [];
-    keyBuffer2 = [];
-    
-    // 创建初始蛇身
-    const centerX = Math.floor((canvas.width / GRID_SIZE) / 2);
-    const centerY = Math.floor((canvas.height / GRID_SIZE) / 2);
-    
-    snake = [
-        {x: centerX, y: centerY},
-        {x: centerX - 1, y: centerY},
-        {x: centerX - 2, y: centerY}
-    ];
-    
-    // 创建第二条蛇（如果是双人模式）
-    if (isMultiplayer) {
-        snake2 = [
-            {x: centerX, y: centerY + 5},
-            {x: centerX + 1, y: centerY + 5},
-            {x: centerX + 2, y: centerY + 5}
-        ];
-        direction2 = 'left';
-        nextDirection2 = 'left';
-        score2Container.style.display = 'block';
-    } else {
-        score2Container.style.display = 'none';
-    }
-    
-    // 重置方向
-    direction = 'right';
-    nextDirection = 'right';
-    
-    // 创建第一个食物
-    createFood();
-    
-    // 重置游戏状态
-    gameOver = false;
-    isPaused = false;
-    pauseIndicator.classList.add('hidden');
-    
-    // 清除之前的定时器
-    if (gameInterval) clearInterval(gameInterval);
-}
 
-// 游戏主循环
-function gameLoop() {
-    if (gameOver) return;
-    
-    // 添加玩家状态标记
-    let player1Dead = false;
-    let player2Dead = false;
-    
-    gameInterval = setInterval(() => {
-        if (!isPaused) {
-            clearCanvas();
-            
-            // 只有玩家1未死亡时才移动
-            if (!player1Dead) {
-                moveSnake();
-            }
-            
-            // 只有玩家2未死亡且是双人模式时才移动
-            if (isMultiplayer && !player2Dead) {
-                moveSnake2();
-            }
-            
-            drawFood();
-            drawSnake();
-            if (isMultiplayer) {
-                drawSnake2();
-            }
-            
-            // 检查碰撞并更新玩家状态
-            const collisionResult = checkCollision();
-            if (collisionResult) {
-                player1Dead = collisionResult.player1Dead || player1Dead;
-                player2Dead = collisionResult.player2Dead || player2Dead;
-            }
-        }
-    }, GAME_SPEED);
-}
+(function() {
+	"use strict";
 
-// 清空画布
-function clearCanvas() {
-    ctx.fillStyle = CANVAS_BACKGROUND_COLOR;
-    ctx.strokeStyle = CANVAS_BORDER_COLOR;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeRect(0, 0, canvas.width, canvas.height);
-}
+	var lastTime = 0;
+	var vendors = ["webkit", "moz"];
+	for (var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+		window.requestAnimationFrame = window[vendors[x] + "RequestAnimationFrame"];
+		window.cancelAnimationFrame =
+			window[vendors[x] + "CancelAnimationFrame"] ||
+			window[vendors[x] + "CancelRequestAnimationFrame"];
+	}
 
-// 绘制蛇
-function drawSnake() {
-    snake.forEach(segment => drawSnakeSegment(segment, SNAKE_COLOR, SNAKE_BORDER_COLOR));
-}
+	if (!window.requestAnimationFrame) {
+		window.requestAnimationFrame = function(callback, element) {
+			var currTime = new Date().getTime();
+			var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+			var id = window.setTimeout(function() {
+				callback(currTime + timeToCall);
+			}, timeToCall);
+			lastTime = currTime + timeToCall;
+			return id;
+		};
+	}
 
-// 绘制第二条蛇
-function drawSnake2() {
-    snake2.forEach(segment => drawSnakeSegment(segment, SNAKE2_COLOR, SNAKE2_BORDER_COLOR));
-}
+	if (!window.cancelAnimationFrame) {
+		window.cancelAnimationFrame = function(id) {
+			clearTimeout(id);
+		};
+	}
+})();
 
-// 绘制蛇的一个节段
-function drawSnakeSegment(segment, fillColor, strokeColor) {
-    const x = segment.x * GRID_SIZE;
-    const y = segment.y * GRID_SIZE;
-    
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = strokeColor;
-    
-    ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
-    ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
-}
+//DOM
 
-// 移动蛇
-function moveSnake() {
-    // 从缓冲队列中获取下一个方向
-    if (keyBuffer.length > 0) {
-        const nextDir = keyBuffer.shift();
-        // 确保不会直接反向
-        if ((nextDir === 'up' && direction !== 'down') ||
-            (nextDir === 'down' && direction !== 'up') ||
-            (nextDir === 'left' && direction !== 'right') ||
-            (nextDir === 'right' && direction !== 'left')) {
-            nextDirection = nextDir;
-        }
-    }
-    
-    // 更新方向
-    direction = nextDirection;
-    
-    // 创建新的头部位置
-    const head = {x: snake[0].x, y: snake[0].y};
-    
-    // 根据当前方向改变头部位置
-    switch(direction) {
-        case 'up':
-            head.y -= 1;
-            break;
-        case 'down':
-            head.y += 1;
-            break;
-        case 'left':
-            head.x -= 1;
-            break;
-        case 'right':
-            head.x += 1;
-            break;
-    }
-    
-    // 处理边界穿越
-    const gridWidth = canvas.width / GRID_SIZE;
-    const gridHeight = canvas.height / GRID_SIZE;
-    
-    // 左右边界互通
-    if (head.x < 0) {
-        head.x = gridWidth - 1;
-    } else if (head.x >= gridWidth) {
-        head.x = 0;
-    }
-    
-    // 上下边界互通
-    if (head.y < 0) {
-        head.y = gridHeight - 1;
-    } else if (head.y >= gridHeight) {
-        head.y = 0;
-    }
-    
-    // 添加新头部
-    snake.unshift(head);
-    
-    // 检查是否吃到食物
-    const didEatFood = snake[0].x === food.x && snake[0].y === food.y;
-    
-    if (didEatFood) {
-        // 增加分数
-        score += 10;
-        scoreElement.textContent = score;
-        
-        // 更新最高分
-        if (score > highScore) {
-            highScore = score;
-            highScoreElement.textContent = highScore;
-            localStorage.setItem('snakeHighScore', highScore);
-        }
-        
-        // 创建新的食物
-        createFood();
-    } else {
-        // 如果没吃到食物，移除尾部
-        snake.pop();
-    }
-}
+(function() {
+	"use strict";
 
-// 移动第二条蛇
-function moveSnake2() {
-    // 从缓冲队列中获取下一个方向
-    if (keyBuffer2.length > 0) {
-        const nextDir = keyBuffer2.shift();
-        // 确保不会直接反向
-        if ((nextDir === 'up' && direction2 !== 'down') ||
-            (nextDir === 'down' && direction2 !== 'up') ||
-            (nextDir === 'left' && direction2 !== 'right') ||
-            (nextDir === 'right' && direction2 !== 'left')) {
-            nextDirection2 = nextDir;
-        }
-    }
-    
-    // 更新方向
-    direction2 = nextDirection2;
-    
-    // 创建新的头部位置
-    const head = {x: snake2[0].x, y: snake2[0].y};
-    
-    // 根据当前方向改变头部位置
-    switch(direction2) {
-        case 'up':
-            head.y -= 1;
-            break;
-        case 'down':
-            head.y += 1;
-            break;
-        case 'left':
-            head.x -= 1;
-            break;
-        case 'right':
-            head.x += 1;
-            break;
-    }
-    
-    // 处理边界穿越
-    const gridWidth = canvas.width / GRID_SIZE;
-    const gridHeight = canvas.height / GRID_SIZE;
-    
-    // 左右边界互通
-    if (head.x < 0) {
-        head.x = gridWidth - 1;
-    } else if (head.x >= gridWidth) {
-        head.x = 0;
-    }
-    
-    // 上下边界互通
-    if (head.y < 0) {
-        head.y = gridHeight - 1;
-    } else if (head.y >= gridHeight) {
-        head.y = 0;
-    }
-    
-    // 添加新头部
-    snake2.unshift(head);
-    
-    // 检查是否吃到食物
-    const didEatFood = snake2[0].x === food.x && snake2[0].y === food.y;
-    
-    if (didEatFood) {
-        // 增加分数
-        score2 += 10;
-        score2Element.textContent = score2;
-        
-        // 创建新的食物
-        createFood();
-    } else {
-        // 如果没吃到食物，移除尾部
-        snake2.pop();
-    }
-}
+	function hasClass(elem, className) {
+		return new RegExp(" " + className + " ").test(" " + elem.className + " ");
+	}
 
-// 创建食物
-function createFood() {
-    const gridWidth = canvas.width / GRID_SIZE;
-    const gridHeight = canvas.height / GRID_SIZE;
-    
-    // 随机生成食物位置
-    food = {
-        x: Math.floor(Math.random() * gridWidth),
-        y: Math.floor(Math.random() * gridHeight)
-    };
-    
-    // 确保食物不会出现在蛇身上
-    if (snake.some(segment => segment.x === food.x && segment.y === food.y)) {
-        createFood(); // 递归调用，重新生成食物
-    }
-}
+	function addClass(elem, className) {
+		if (!hasClass(elem, className)) {
+			elem.className += " " + className;
+		}
+	}
 
-// 绘制食物
-function drawFood() {
-    const x = food.x * GRID_SIZE;
-    const y = food.y * GRID_SIZE;
-    
-    ctx.fillStyle = FOOD_COLOR;
-    ctx.strokeStyle = FOOD_BORDER_COLOR;
-    
-    ctx.beginPath();
-    ctx.arc(x + GRID_SIZE/2, y + GRID_SIZE/2, GRID_SIZE/2, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.stroke();
-}
+	function removeClass(elem, className) {
+		var newClass = " " + elem.className.replace(/[\t\r\n]/g, " ") + " ";
+		if (hasClass(elem, className)) {
+			while (newClass.indexOf(" " + className + " ") >= 0) {
+				newClass = newClass.replace(" " + className + " ", " ");
+			}
+			elem.className = newClass.replace(/^\s+|\s+$/g, "");
+		}
+	}
 
-// 检查碰撞
-function checkCollision() {
-    const head = snake[0];
-    
-    // 检查是否撞到自己(从第1个开始比较，因为第0个是头)
-    const hitSelf = snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y);
-    
-    let player1Lost = false;
-    let player2Lost = false;
-    
-    if (hitSelf) {
-        player1Lost = true;
-    }
-    
-    // 双人模式下的额外碰撞检测
-    if (isMultiplayer) {
-        const head2 = snake2[0];
-        
-        // 检查第二条蛇是否撞到自己
-        const hitSelf2 = snake2.slice(1).some(segment => segment.x === head2.x && segment.y === head2.y);
-        
-        if (hitSelf2) {
-            player2Lost = true;
-        }
-        
-        // 检查两条蛇是否相撞
-        const snakesCollided = snake.some(segment => segment.x === head2.x && segment.y === head2.y) || 
-                              snake2.some(segment => segment.x === head.x && segment.y === head.y);
-        
-        if (snakesCollided) {
-            // 如果蛇头相撞，两条蛇都输
-            if (head.x === head2.x && head.y === head2.y) {
-                player1Lost = true;
-                player2Lost = true;
-            } else {
-                // 判断哪条蛇的头撞到了另一条蛇的身体
-                const snake1HitSnake2 = snake2.some(segment => segment.x === head.x && segment.y === head.y);
-                const snake2HitSnake1 = snake.some(segment => segment.x === head2.x && segment.y === head2.y);
-                
-                if (snake1HitSnake2) player1Lost = true;
-                if (snake2HitSnake1) player2Lost = true;
-            }
-        }
-        
-        // 双人模式下的独立死亡机制
-        if ((player1Lost && !player2Lost) || (!player1Lost && player2Lost)) {
-            if (player1Lost) {
-                // 标记玩家1已死亡，但保留蛇身显示
-                // 显示提示消息
-                const message = document.createElement('div');
-                message.textContent = '玩家1已死亡，等待玩家2...';
-                message.style.position = 'absolute';
-                message.style.top = '50%';
-                message.style.left = '25%';
-                message.style.transform = 'translate(-50%, -50%)';
-                message.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-                message.style.color = 'white';
-                message.style.padding = '10px';
-                message.style.borderRadius = '5px';
-                message.style.zIndex = '100';
-                message.id = 'player1DeadMessage';
-                if (!document.getElementById('player1DeadMessage')) {
-                    document.querySelector('.canvas-container').appendChild(message);
-                }
-                return { player1Dead: true, player2Dead: false };
-            } else {
-                // 标记玩家2已死亡，但保留蛇身显示
-                // 显示提示消息
-                const message = document.createElement('div');
-                message.textContent = '玩家2已死亡，等待玩家1...';
-                message.style.position = 'absolute';
-                message.style.top = '50%';
-                message.style.left = '75%';
-                message.style.transform = 'translate(-50%, -50%)';
-                message.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-                message.style.color = 'white';
-                message.style.padding = '10px';
-                message.style.borderRadius = '5px';
-                message.style.zIndex = '100';
-                message.id = 'player2DeadMessage';
-                if (!document.getElementById('player2DeadMessage')) {
-                    document.querySelector('.canvas-container').appendChild(message);
-                }
-                return { player1Dead: false, player2Dead: true };
-            }
-        }
-    }
-    
-    // 如果是单人模式或两个玩家都输了，结束游戏
-    if (player1Lost || player2Lost) {
-        // 单人模式下直接结束
-        if (!isMultiplayer) {
-            endGame();
-            return null;
-        }
-        
-        // 双人模式下，只有当两个玩家都死亡时才结束游戏
-        if (isMultiplayer && player1Lost && player2Lost) {
-            endGame();
-            return null;
-        }
-    }
-    
-    return null;
-}
+	function toggleClass(elem, className) {
+		var newClass = " " + elem.className.replace(/[\t\r\n]/g, " ") + " ";
+		if (hasClass(elem, className)) {
+			while (newClass.indexOf(" " + className + " ") >= 0) {
+				newClass = newClass.replace(" " + className + " ", " ");
+			}
+			elem.className = newClass.replace(/^\s+|\s+$/g, "");
+		} else {
+			elem.className += " " + className;
+		}
+	}
+})();
 
-// 重置玩家1
-function resetPlayer1() {
-    const centerX = Math.floor((canvas.width / GRID_SIZE) / 2);
-    const centerY = Math.floor((canvas.height / GRID_SIZE) / 2);
-    
-    snake = [
-        {x: centerX, y: centerY},
-        {x: centerX - 1, y: centerY},
-        {x: centerX - 2, y: centerY}
-    ];
-    
-    direction = 'right';
-    nextDirection = 'right';
-    score = 0;
-    scoreElement.textContent = score;
-}
+//核心
 
-// 重置玩家2
-function resetPlayer2() {
-    const centerX = Math.floor((canvas.width / GRID_SIZE) / 2);
-    const centerY = Math.floor((canvas.height / GRID_SIZE) / 2);
-    
-    snake2 = [
-        {x: centerX, y: centerY + 5},
-        {x: centerX + 1, y: centerY + 5},
-        {x: centerX + 2, y: centerY + 5}
-    ];
-    
-    direction2 = 'left';
-    nextDirection2 = 'left';
-    score2 = 0;
-    score2Element.textContent = score2;
-}
+g = {};
 
-// 结束游戏
-function endGame() {
-    gameOver = true;
-    clearInterval(gameInterval);
-    
-    // 显示游戏结束界面
-    finalScoreElement.textContent = score;
-    gameOverScreen.classList.remove('hidden');
-}
+(function() {
+	"use strict";
 
-// 重新开始游戏
-function restartGame() {
-    startGame();
-}
+	g.m = Math;
+	g.mathProps = "E LN10 LN2 LOG2E LOG10E PI SQRT1_2 SQRT2 abs acos asin atan ceil cos exp floor log round sin sqrt tan atan2 pow max min".split(
+		" "
+	);
+	for (var i = 0; i < g.mathProps.length; i++) {
+		g[g.mathProps[i]] = g.m[g.mathProps[i]];
+	}
+	g.m.TWO_PI = g.m.PI * 2;
 
-// 通过键盘改变方向
-function changeDirection(event) {
-    // 防止蛇反向移动
-    if (isPaused && event.code !== 'Space') return;
+	/*================================================
     
-    const keyPressed = event.key;
+      Miscellaneous
     
-    // 玩家1控制
-    if (keyPressed === keyConfig.player1.up) {
-        if (direction !== 'down') {
-            // 将新方向添加到缓冲队列
-            addToKeyBuffer('up');
-        }
-        event.preventDefault();
-    } else if (keyPressed === keyConfig.player1.down) {
-        if (direction !== 'up') {
-            addToKeyBuffer('down');
-        }
-        event.preventDefault();
-    } else if (keyPressed === keyConfig.player1.left) {
-        if (direction !== 'right') {
-            addToKeyBuffer('left');
-        }
-        event.preventDefault();
-    } else if (keyPressed === keyConfig.player1.right) {
-        if (direction !== 'left') {
-            addToKeyBuffer('right');
-        }
-        event.preventDefault();
-    }
-    
-    // 玩家2控制（仅在双人模式下）
-    if (isMultiplayer) {
-        if (keyPressed === keyConfig.player2.up) {
-            if (direction2 !== 'down') {
-                addToKeyBuffer2('up');
-            }
-            event.preventDefault();
-        } else if (keyPressed === keyConfig.player2.down) {
-            if (direction2 !== 'up') {
-                addToKeyBuffer2('down');
-            }
-            event.preventDefault();
-        } else if (keyPressed === keyConfig.player2.left) {
-            if (direction2 !== 'right') {
-                addToKeyBuffer2('left');
-            }
-            event.preventDefault();
-        } else if (keyPressed === keyConfig.player2.right) {
-            if (direction2 !== 'left') {
-                addToKeyBuffer2('right');
-            }
-            event.preventDefault();
-        }
-    }
-    
-    // 空格键功能：开始游戏或暂停/继续
-    if (keyPressed === ' ') {
-        if (gameOver || startScreen.classList.contains('hidden') === false) {
-            // 游戏未开始或已结束，按空格开始游戏
-            // 添加0.05秒延时后开始游戏
-            setTimeout(() => {
-                startGame();
-            }, 50);
-            startGame();
-        } else {
-            // 游戏进行中，按空格暂停/继续
-            togglePause();
-        }
-        event.preventDefault();
-    }
-}
+      ================================================*/
 
-// 添加按键到缓冲队列的函数
-function addToKeyBuffer(newDirection) {
-    // 如果缓冲区为空或者最后一个方向与新方向不同，才添加
-    if (keyBuffer.length === 0 || keyBuffer[keyBuffer.length - 1] !== newDirection) {
-        keyBuffer.push(newDirection);
-        // 保持缓冲区不超过最大长度
-        if (keyBuffer.length > KEY_BUFFER_MAX_SIZE) {
-            keyBuffer.shift(); // 移除最旧的方向
-        }
-    }
-}
+	g.isset = function(prop) {
+		return typeof prop != "undefined";
+	};
 
-// 玩家2的按键缓冲函数
-function addToKeyBuffer2(newDirection) {
-    if (keyBuffer2.length === 0 || keyBuffer2[keyBuffer2.length - 1] !== newDirection) {
-        keyBuffer2.push(newDirection);
-        if (keyBuffer2.length > KEY_BUFFER_MAX_SIZE) {
-            keyBuffer2.shift();
-        }
-    }
-}
+	g.log = function() {
+		if (g.isset(g.config) && g.config.debug && window.console) {
+			console.log(Array.prototype.slice.call(arguments));
+		}
+	};
+})();
 
-// 为触屏按钮添加缓冲支持
-function changeDirectionButton(newDirection) {
-    if (isPaused) return;
-    
-    // 根据当前模式决定控制哪条蛇
-    if (!isMultiplayer) {
-        // 单人模式
-        if ((newDirection === 'up' && direction !== 'down') ||
-            (newDirection === 'down' && direction !== 'up') ||
-            (newDirection === 'left' && direction !== 'right') ||
-            (newDirection === 'right' && direction !== 'left')) {
-            addToKeyBuffer(newDirection);
-        }
-    } else {
-        // 双人模式下，屏幕按钮控制玩家1
-        if ((newDirection === 'up' && direction !== 'down') ||
-            (newDirection === 'down' && direction !== 'up') ||
-            (newDirection === 'left' && direction !== 'right') ||
-            (newDirection === 'right' && direction !== 'left')) {
-            addToKeyBuffer(newDirection);
-        }
-    }
-}
+//图表
 
-// 暂停/继续游戏
-function togglePause() {
-    isPaused = !isPaused;
-    pauseIndicator.classList.toggle('hidden', !isPaused);
-    pauseButton.textContent = isPaused ? '继续' : '暂停';
-}
+(function() {
+	"use strict";
 
-// 切换多人模式
-function toggleMultiplayerMode() {
-    // 切换模式
-    isMultiplayer = !isMultiplayer;
-    modeToggleButton.textContent = isMultiplayer ? '切换单人模式' : '切换双人模式';
-    
-    // 更新开始界面的提示
-    const startScreenText = document.querySelector('#startScreen p');
-    if (isMultiplayer) {
-        startScreenText.innerHTML = `玩家1：${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制<br>玩家2：${keyConfig.player2.up}/${keyConfig.player2.left}/${keyConfig.player2.down}/${keyConfig.player2.right}键控制`;
-        score2Container.style.display = 'block';
-    } else {
-        startScreenText.innerHTML = `使用${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制蛇的移动`;
-        score2Container.style.display = 'none';
-    }
-    
-    // 清空画布
-    if (ctx) {
-        clearCanvas();
-    }
-    
-    // 停止当前游戏
-    if (gameInterval) {
-        clearInterval(gameInterval);
-    }
-    
-    // 重置游戏状态
-    gameOver = false;
-    isPaused = false;
-    
-    // 显示开始界面
-    startScreen.classList.remove('hidden');
-    gameOverScreen.classList.add('hidden');
-    pauseIndicator.classList.add('hidden');
-    
-    // 移除玩家死亡提示（如果存在）
-    const player1DeadMessage = document.getElementById('player1DeadMessage');
-    const player2DeadMessage = document.getElementById('player2DeadMessage');
-    if (player1DeadMessage) player1DeadMessage.remove();
-    if (player2DeadMessage) player2DeadMessage.remove();
-}
+	g.Group = function() {
+		this.collection = [];
+		this.length = 0;
+	};
 
-// 打开键位配置面板
-function openKeyConfig() {
-    // 创建键位配置面板
-    const keyConfigPanel = document.createElement('div');
-    keyConfigPanel.id = 'keyConfigPanel';
-    keyConfigPanel.style.position = 'absolute';
-    keyConfigPanel.style.top = '50%';
-    keyConfigPanel.style.left = '50%';
-    keyConfigPanel.style.transform = 'translate(-50%, -50%)';
-    keyConfigPanel.style.backgroundColor = 'white';
-    keyConfigPanel.style.padding = '20px';
-    keyConfigPanel.style.borderRadius = '10px';
-    keyConfigPanel.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.3)';
-    keyConfigPanel.style.zIndex = '1000';
-    keyConfigPanel.style.width = '300px';
-    
-    // 添加标题
-    const title = document.createElement('h3');
-    title.textContent = '自定义键位设置';
-    title.style.marginBottom = '15px';
-    keyConfigPanel.appendChild(title);
-    
-    // 创建玩家1键位设置
-    const player1Title = document.createElement('h4');
-    player1Title.textContent = '玩家1键位';
-    keyConfigPanel.appendChild(player1Title);
-    
-    const player1Keys = ['up', 'down', 'left', 'right'];
-    const player1Labels = ['上', '下', '左', '右'];
-    
-    player1Keys.forEach((key, index) => {
-        const container = document.createElement('div');
-        container.style.margin = '5px 0';
-        container.style.display = 'flex';
-        container.style.justifyContent = 'space-between';
-        
-        const label = document.createElement('label');
-        label.textContent = player1Labels[index] + ': ';
-        container.appendChild(label);
-        
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = keyConfig.player1[key];
-        input.id = `player1-${key}`;
-        input.style.width = '100px';
-        input.addEventListener('keydown', function(e) {
-            e.preventDefault();
-            this.value = e.key;
-        });
-        container.appendChild(input);
-        
-        keyConfigPanel.appendChild(container);
-    });
-    
-    // 创建玩家2键位设置
-    const player2Title = document.createElement('h4');
-    player2Title.textContent = '玩家2键位';
-    player2Title.style.marginTop = '15px';
-    keyConfigPanel.appendChild(player2Title);
-    
-    const player2Keys = ['up', 'down', 'left', 'right'];
-    const player2Labels = ['上', '下', '左', '右'];
-    
-    player2Keys.forEach((key, index) => {
-        const container = document.createElement('div');
-        container.style.margin = '5px 0';
-        container.style.display = 'flex';
-        container.style.justifyContent = 'space-between';
-        
-        const label = document.createElement('label');
-        label.textContent = player2Labels[index] + ': ';
-        container.appendChild(label);
-        
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = keyConfig.player2[key];
-        input.id = `player2-${key}`;
-        input.style.width = '100px';
-        input.addEventListener('keydown', function(e) {
-            e.preventDefault();
-            this.value = e.key;
-        });
-        container.appendChild(input);
-        
-        keyConfigPanel.appendChild(container);
-    });
-    
-    // 添加保存和取消按钮
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'space-between';
-    buttonContainer.style.marginTop = '20px';
-    
-    const saveButton = document.createElement('button');
-    saveButton.textContent = '保存';
-    saveButton.addEventListener('click', function() {
-        // 保存玩家1键位
-        player1Keys.forEach(key => {
-            keyConfig.player1[key] = document.getElementById(`player1-${key}`).value;
-        });
-        
-        // 保存玩家2键位
-        player2Keys.forEach(key => {
-            keyConfig.player2[key] = document.getElementById(`player2-${key}`).value;
-        });
-        
-        // 保存到localStorage
-        localStorage.setItem('keyConfig', JSON.stringify(keyConfig));
-        
-        // 更新开始界面的提示
-        const startScreenText = document.querySelector('#startScreen p');
-        if (isMultiplayer) {
-            startScreenText.innerHTML = `玩家1：${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制<br>玩家2：${keyConfig.player2.up}/${keyConfig.player2.left}/${keyConfig.player2.down}/${keyConfig.player2.right}键控制`;
-        } else {
-            startScreenText.innerHTML = `使用${keyConfig.player1.up}/${keyConfig.player1.left}/${keyConfig.player1.down}/${keyConfig.player1.right}控制蛇的移动`;
-        }
-        
-        // 关闭面板
-        document.body.removeChild(keyConfigPanel);
-    });
-    buttonContainer.appendChild(saveButton);
-    
-    const cancelButton = document.createElement('button');
-    cancelButton.textContent = '取消';
-    cancelButton.addEventListener('click', function() {
-        document.body.removeChild(keyConfigPanel);
-    });
-    buttonContainer.appendChild(cancelButton);
-    
-    keyConfigPanel.appendChild(buttonContainer);
-    
-    // 添加到页面
-    document.body.appendChild(keyConfigPanel);
-}
+	g.Group.prototype.add = function(item) {
+		this.collection.push(item);
+		this.length++;
+	};
 
-// 游戏中途重开功能
-function restartGameInProgress() {
-    // 移除死亡提示（如果有）
-    const player1DeadMessage = document.getElementById('player1DeadMessage');
-    const player2DeadMessage = document.getElementById('player2DeadMessage');
-    
-    if (player1DeadMessage) {
-        player1DeadMessage.parentNode.removeChild(player1DeadMessage);
-    }
-    
-    if (player2DeadMessage) {
-        player2DeadMessage.parentNode.removeChild(player2DeadMessage);
-    }
-    
-    // 重置游戏
-    resetGame();
-    
-    // 如果游戏已经结束，隐藏游戏结束界面
-    gameOverScreen.classList.add('hidden');
-    
-    // 如果游戏已经暂停，恢复游戏
-    if (isPaused) {
-        togglePause();
-    }
-    
-    // 清除之前的定时器并重新开始游戏循环
-    if (gameInterval) {
-        clearInterval(gameInterval);
-    }
-    gameLoop();
-}
+	g.Group.prototype.remove = function(index) {
+		if (index < this.length) {
+			this.collection.splice(index, 1);
+			this.length--;
+		}
+	};
 
-// 当页面加载完毕初始化游戏
-window.onload = init;
+	g.Group.prototype.empty = function() {
+		this.collection.length = 0;
+		this.length = 0;
+	};
+
+	g.Group.prototype.each = function(action, asc) {
+		var asc = asc || 0,
+			i;
+		if (asc) {
+			for (i = 0; i < this.length; i++) {
+				this.collection[i][action](i);
+			}
+		} else {
+			i = this.length;
+			while (i--) {
+				this.collection[i][action](i);
+			}
+		}
+	};
+})();
+
+/*================================================
+
+Utilities
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.util = {};
+
+	// 随机
+
+	g.util.rand = function(min, max) {
+		return g.m.random() * (max - min) + min;
+	};
+
+	g.util.randInt = function(min, max) {
+		return g.m.floor(g.m.random() * (max - min + 1)) + min;
+	};
+})();
+
+// 状态
+
+(function() {
+	"use strict";
+
+	g.states = {};
+
+	g.addState = function(state) {
+		g.states[state.name] = state;
+	};
+
+	g.setState = function(name) {
+		if (g.state) {
+			g.states[g.state].exit();
+		}
+		g.state = name;
+		g.states[g.state].init();
+	};
+
+	g.currentState = function() {
+		return g.states[g.state];
+	};
+})();
+
+/*================================================
+
+Time
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.Time = function() {
+		this.reset();
+	};
+
+	g.Time.prototype.reset = function() {
+		this.now = Date.now();
+		this.last = Date.now();
+		this.delta = 60;
+		this.ndelta = 1;
+		this.elapsed = 0;
+		this.nelapsed = 0;
+		this.tick = 0;
+	};
+
+	g.Time.prototype.update = function() {
+		this.now = Date.now();
+		this.delta = this.now - this.last;
+		this.ndelta = Math.min(Math.max(this.delta / (1000 / 60), 0.0001), 10);
+		this.elapsed += this.delta;
+		this.nelapsed += this.ndelta;
+		this.last = this.now;
+		this.tick++;
+	};
+})();
+
+/*================================================
+
+Grid Entity
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.Grid = function(cols, rows) {
+		this.cols = cols;
+		this.rows = rows;
+		this.tiles = [];
+		for (var x = 0; x < cols; x++) {
+			this.tiles[x] = [];
+			for (var y = 0; y < rows; y++) {
+				this.tiles[x].push("empty");
+			}
+		}
+	};
+
+	g.Grid.prototype.get = function(x, y) {
+		return this.tiles[x][y];
+	};
+
+	g.Grid.prototype.set = function(x, y, val) {
+		this.tiles[x][y] = val;
+	};
+})();
+
+/*================================================
+
+Board Tile Entity
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.BoardTile = function(opt) {
+		this.parentState = opt.parentState;
+		this.parentGroup = opt.parentGroup;
+		this.col = opt.col;
+		this.row = opt.row;
+		this.x = opt.x;
+		this.y = opt.y;
+		this.z = 0;
+		this.w = opt.w;
+		this.h = opt.h;
+		this.elem = document.createElement("div");
+		this.elem.style.position = "absolute";
+		this.elem.className = "tile";
+		this.parentState.stageElem.appendChild(this.elem);
+		this.classes = {
+			pressed: 0,
+			path: 0,
+			up: 0,
+			down: 0,
+			left: 0,
+			right: 0
+		};
+		this.updateDimensions();
+	};
+
+	g.BoardTile.prototype.update = function() {
+		for (var k in this.classes) {
+			if (this.classes[k]) {
+				this.classes[k]--;
+			}
+		}
+
+		if (
+			this.parentState.food.tile.col == this.col ||
+			this.parentState.food.tile.row == this.row
+		) {
+			this.classes.path = 1;
+			if (this.col < this.parentState.food.tile.col) {
+				this.classes.right = 1;
+			} else {
+				this.classes.right = 0;
+			}
+			if (this.col > this.parentState.food.tile.col) {
+				this.classes.left = 1;
+			} else {
+				this.classes.left = 0;
+			}
+			if (this.row > this.parentState.food.tile.row) {
+				this.classes.up = 1;
+			} else {
+				this.classes.up = 0;
+			}
+			if (this.row < this.parentState.food.tile.row) {
+				this.classes.down = 1;
+			} else {
+				this.classes.down = 0;
+			}
+		} else {
+			this.classes.path = 0;
+		}
+
+		if (this.parentState.food.eaten) {
+			this.classes.path = 0;
+		}
+	};
+
+	g.BoardTile.prototype.updateDimensions = function() {
+		this.x = this.col * this.parentState.tileWidth;
+		this.y = this.row * this.parentState.tileHeight;
+		this.w = this.parentState.tileWidth - this.parentState.spacing;
+		this.h = this.parentState.tileHeight - this.parentState.spacing;
+		this.elem.style.left = this.x + "px";
+		this.elem.style.top = this.y + "px";
+		this.elem.style.width = this.w + "px";
+		this.elem.style.height = this.h + "px";
+	};
+
+	g.BoardTile.prototype.render = function() {
+		var classString = "";
+		for (var k in this.classes) {
+			if (this.classes[k]) {
+				classString += k + " ";
+			}
+		}
+		this.elem.className = "tile " + classString;
+	};
+})();
+
+/*================================================
+
+Snake Tile Entity
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.SnakeTile = function(opt) {
+		this.parentState = opt.parentState;
+		this.parentGroup = opt.parentGroup;
+		this.col = opt.col;
+		this.row = opt.row;
+		this.x = opt.x;
+		this.y = opt.y;
+		this.w = opt.w;
+		this.h = opt.h;
+		this.color = null;
+		this.scale = 1;
+		this.rotation = 0;
+		this.blur = 0;
+		this.alpha = 1;
+		this.borderRadius = 0;
+		this.borderRadiusAmount = 0;
+		this.elem = document.createElement("div");
+		this.elem.style.position = "absolute";
+		this.parentState.stageElem.appendChild(this.elem);
+	};
+
+	g.SnakeTile.prototype.update = function(i) {
+		this.x = this.col * this.parentState.tileWidth;
+		this.y = this.row * this.parentState.tileHeight;
+		if (i == 0) {
+			this.color = "#fff";
+			this.blur =
+				this.parentState.dimAvg * 0.03 +
+				Math.sin(this.parentState.time.elapsed / 200) *
+				this.parentState.dimAvg *
+				0.015;
+			if (this.parentState.snake.dir == "n") {
+				this.borderRadius =
+					this.borderRadiusAmount + "% " + this.borderRadiusAmount + "% 0 0";
+			} else if (this.parentState.snake.dir == "s") {
+				this.borderRadius =
+					"0 0 " +
+					this.borderRadiusAmount +
+					"% " +
+					this.borderRadiusAmount +
+					"%";
+			} else if (this.parentState.snake.dir == "e") {
+				this.borderRadius =
+					"0 " +
+					this.borderRadiusAmount +
+					"% " +
+					this.borderRadiusAmount +
+					"% 0";
+			} else if (this.parentState.snake.dir == "w") {
+				this.borderRadius =
+					this.borderRadiusAmount + "% 0 0 " + this.borderRadiusAmount + "%";
+			}
+		} else {
+			this.color = "#fff";
+			this.blur = 0;
+			this.borderRadius = "0";
+		}
+		this.alpha = 1 - i / this.parentState.snake.tiles.length * 0.6;
+		this.rotation =
+			this.parentState.snake.justAteTick /
+			this.parentState.snake.justAteTickMax *
+			90;
+		this.scale =
+			1 +
+			this.parentState.snake.justAteTick /
+			this.parentState.snake.justAteTickMax *
+			1;
+	};
+
+	g.SnakeTile.prototype.updateDimensions = function() {
+		this.w = this.parentState.tileWidth - this.parentState.spacing;
+		this.h = this.parentState.tileHeight - this.parentState.spacing;
+	};
+
+	g.SnakeTile.prototype.render = function(i) {
+		this.elem.style.left = this.x + "px";
+		this.elem.style.top = this.y + "px";
+		this.elem.style.width = this.w + "px";
+		this.elem.style.height = this.h + "px";
+		this.elem.style.backgroundColor = "rgba(255, 255, 255, " + this.alpha + ")";
+		this.elem.style.boxShadow = "0 0 " + this.blur + "px #fff";
+		this.elem.style.borderRadius = this.borderRadius;
+	};
+})();
+
+/*================================================
+
+Food Tile Entity
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.FoodTile = function(opt) {
+		this.parentState = opt.parentState;
+		this.parentGroup = opt.parentGroup;
+		this.col = opt.col;
+		this.row = opt.row;
+		this.x = opt.x;
+		this.y = opt.y;
+		this.w = opt.w;
+		this.h = opt.h;
+		this.blur = 0;
+		this.scale = 1;
+		this.hue = 100;
+		this.opacity = 0;
+		this.elem = document.createElement("div");
+		this.elem.style.position = "absolute";
+		this.parentState.stageElem.appendChild(this.elem);
+	};
+
+	g.FoodTile.prototype.update = function() {
+		this.x = this.col * this.parentState.tileWidth;
+		this.y = this.row * this.parentState.tileHeight;
+		this.blur =
+			this.parentState.dimAvg * 0.03 +
+			Math.sin(this.parentState.time.elapsed / 200) *
+			this.parentState.dimAvg *
+			0.015;
+		this.scale = 0.8 + Math.sin(this.parentState.time.elapsed / 200) * 0.2;
+
+		if (this.parentState.food.birthTick || this.parentState.food.deathTick) {
+			if (this.parentState.food.birthTick) {
+				this.opacity = 1 - this.parentState.food.birthTick / 1 * 1;
+			} else {
+				this.opacity = this.parentState.food.deathTick / 1 * 1;
+			}
+		} else {
+			this.opacity = 1;
+		}
+	};
+
+	g.FoodTile.prototype.updateDimensions = function() {
+		this.w = this.parentState.tileWidth - this.parentState.spacing;
+		this.h = this.parentState.tileHeight - this.parentState.spacing;
+	};
+
+	g.FoodTile.prototype.render = function() {
+		this.elem.style.left = this.x + "px";
+		this.elem.style.top = this.y + "px";
+		this.elem.style.width = this.w + "px";
+		this.elem.style.height = this.h + "px";
+		this.elem.style["transform"] = "translateZ(0) scale(" + this.scale + ")";
+		this.elem.style.backgroundColor = "hsla(" + this.hue + ", 100%, 60%, 1)";
+		this.elem.style.boxShadow =
+			"0 0 " + this.blur + "px hsla(" + this.hue + ", 100%, 60%, 1)";
+		this.elem.style.opacity = this.opacity;
+	};
+})();
+
+/*================================================
+
+Snake Entity
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.Snake = function(opt) {
+		this.parentState = opt.parentState;
+		(this.dir = "e"), (this.currDir = this.dir);
+		this.tiles = [];
+		for (var i = 0; i < 5; i++) {
+			this.tiles.push(
+				new g.SnakeTile({
+					parentState: this.parentState,
+					parentGroup: this.tiles,
+					col: 8 - i,
+					row: 3,
+					x: (8 - i) * opt.parentState.tileWidth,
+					y: 3 * opt.parentState.tileHeight,
+					w: opt.parentState.tileWidth - opt.parentState.spacing,
+					h: opt.parentState.tileHeight - opt.parentState.spacing
+				})
+			);
+		}
+		this.last = 0;
+		this.updateTick = 10;
+		this.updateTickMax = this.updateTick;
+		this.updateTickLimit = 3;
+		this.updateTickChange = 0.2;
+		this.deathFlag = 0;
+		this.justAteTick = 0;
+		this.justAteTickMax = 1;
+		this.justAteTickChange = 0.05;
+
+		var i = this.tiles.length;
+
+		while (i--) {
+			this.parentState.grid.set(this.tiles[i].col, this.tiles[i].row, "snake");
+		}
+	};
+
+	g.Snake.prototype.updateDimensions = function() {
+		var i = this.tiles.length;
+		while (i--) {
+			this.tiles[i].updateDimensions();
+		}
+	};
+
+	g.Snake.prototype.update = function() {
+		if (this.parentState.keys.up) {
+			if (
+				this.dir != "s" &&
+				this.dir != "n" &&
+				this.currDir != "s" &&
+				this.currDir != "n"
+			) {
+				this.dir = "n";
+			}
+		} else if (this.parentState.keys.down) {
+			if (
+				this.dir != "n" &&
+				this.dir != "s" &&
+				this.currDir != "n" &&
+				this.currDir != "s"
+			) {
+				this.dir = "s";
+			}
+		} else if (this.parentState.keys.right) {
+			if (
+				this.dir != "w" &&
+				this.dir != "e" &&
+				this.currDir != "w" &&
+				this.currDir != "e"
+			) {
+				this.dir = "e";
+			}
+		} else if (this.parentState.keys.left) {
+			if (
+				this.dir != "e" &&
+				this.dir != "w" &&
+				this.currDir != "e" &&
+				this.currDir != "w"
+			) {
+				this.dir = "w";
+			}
+		}
+
+		this.parentState.keys.up = 0;
+		this.parentState.keys.down = 0;
+		this.parentState.keys.right = 0;
+		this.parentState.keys.left = 0;
+
+		this.updateTick += this.parentState.time.ndelta;
+		if (this.updateTick >= this.updateTickMax) {
+			this.updateTick = this.updateTick - this.updateTickMax;
+
+			this.tiles.unshift(
+				new g.SnakeTile({
+					parentState: this.parentState,
+					parentGroup: this.tiles,
+					col: this.tiles[0].col,
+					row: this.tiles[0].row,
+					x: this.tiles[0].col * this.parentState.tileWidth,
+					y: this.tiles[0].row * this.parentState.tileHeight,
+					w: this.parentState.tileWidth - this.parentState.spacing,
+					h: this.parentState.tileHeight - this.parentState.spacing
+				})
+			);
+			this.last = this.tiles.pop();
+			this.parentState.stageElem.removeChild(this.last.elem);
+
+			this.parentState.boardTiles.collection[
+				this.last.col + this.last.row * this.parentState.cols
+			].classes.pressed = 2;
+
+			// sync data grid of the play state
+			var i = this.tiles.length;
+
+			while (i--) {
+				this.parentState.grid.set(
+					this.tiles[i].col,
+					this.tiles[i].row,
+					"snake"
+				);
+			}
+			this.parentState.grid.set(this.last.col, this.last.row, "empty");
+
+			// 蛇头移动
+			if (this.dir == "n") {
+				this.currDir = "n";
+				this.tiles[0].row -= 1;
+			} else if (this.dir == "s") {
+				this.currDir = "s";
+				this.tiles[0].row += 1;
+			} else if (this.dir == "w") {
+				this.currDir = "w";
+				this.tiles[0].col -= 1;
+			} else if (this.dir == "e") {
+				this.currDir = "e";
+				this.tiles[0].col += 1;
+			}
+
+			// 检查是否撞死
+			this.wallFlag = false;
+			if (this.tiles[0].col >= this.parentState.cols) {
+				this.tiles[0].col = 0;
+				this.wallFlag = true;
+			}
+			if (this.tiles[0].col < 0) {
+				this.tiles[0].col = this.parentState.cols - 1;
+				this.wallFlag = true;
+			}
+			if (this.tiles[0].row >= this.parentState.rows) {
+				this.tiles[0].row = 0;
+				this.wallFlag = true;
+			}
+			if (this.tiles[0].row < 0) {
+				this.tiles[0].row = this.parentState.rows - 1;
+				this.wallFlag = true;
+			}
+
+			// 检查是否撞到自己
+			if (
+				this.parentState.grid.get(this.tiles[0].col, this.tiles[0].row) ==
+				"snake"
+			) {
+				this.deathFlag = 1;
+				clearTimeout(this.foodCreateTimeout);
+				gameRunning = false; 
+				showGameOverPopup(this); // 新增这一行来显示弹窗
+			}
+
+			// 检查是否吃到食物
+			if (
+				this.parentState.grid.get(this.tiles[0].col, this.tiles[0].row) ==
+				"food"
+			) {
+				this.tiles.push(
+					new g.SnakeTile({
+						parentState: this.parentState,
+						parentGroup: this.tiles,
+						col: this.last.col,
+						row: this.last.row,
+						x: this.last.col * this.parentState.tileWidth,
+						y: this.last.row * this.parentState.tileHeight,
+						w: this.parentState.tileWidth - this.parentState.spacing,
+						h: this.parentState.tileHeight - this.parentState.spacing
+					})
+				);
+				// 只在挑战模式下更新速度
+				if (gameMode === 'challenge') {
+					if (this.updateTickMax - this.updateTickChange > this.updateTickLimit) {
+						this.updateTickMax -= this.updateTickChange;
+					}
+				}
+				this.parentState.score = this.parentState.score + 52;
+				this.parentState.scoreElem.innerHTML = "分数：" + this.parentState.score;
+				updateScoreBoard(this.parentState.score);
+				this.justAteTick = this.justAteTickMax;
+				score = this.parentState.score;
+				this.parentState.food.eaten = 1;
+				this.parentState.stageElem.removeChild(this.parentState.food.tile.elem);
+				var _this = this;
+
+				this.foodCreateTimeout = setTimeout(function() {
+					_this.parentState.food = new g.Food({
+						parentState: _this.parentState
+					});
+				}, 300);
+			}
+
+			// 检查是否死亡
+			if (this.deathFlag) {
+				//showMenu();
+				// g.setState("play"); 
+				showGameOverPopup(this); // 新增这一行来显示弹窗
+			}
+		}
+
+		// 更新食物
+		var i = this.tiles.length;
+		while (i--) {
+			this.tiles[i].update(i);
+		}
+
+		if (this.justAteTick > 0) {
+			this.justAteTick -= this.justAteTickChange;
+		} else if (this.justAteTick < 0) {
+			this.justAteTick = 0;
+		}
+	};
+
+	g.Snake.prototype.render = function() {
+		// render individual snake tiles
+		var i = this.tiles.length;
+		while (i--) {
+			this.tiles[i].render(i);
+		}
+	};
+})();
+
+/*================================================
+
+Food Entity
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.Food = function(opt) {
+		this.parentState = opt.parentState;
+		this.tile = new g.FoodTile({
+			parentState: this.parentState,
+			col: 0,
+			row: 0,
+			x: 0,
+			y: 0,
+			w: opt.parentState.tileWidth - opt.parentState.spacing,
+			h: opt.parentState.tileHeight - opt.parentState.spacing
+		});
+		this.reset();
+		this.eaten = 0;
+		this.birthTick = 1;
+		this.deathTick = 0;
+		this.birthTickChange = 0.025;
+		this.deathTickChange = 0.05;
+	};
+
+	g.Food.prototype.reset = function() {
+		var empty = [];
+		for (var x = 0; x < this.parentState.cols; x++) {
+			for (var y = 0; y < this.parentState.rows; y++) {
+				var tile = this.parentState.grid.get(x, y);
+				if (tile == "empty") {
+					empty.push({
+						x: x,
+						y: y
+					});
+				}
+			}
+		}
+		var newTile = empty[g.util.randInt(0, empty.length - 1)];
+		this.tile.col = newTile.x;
+		this.tile.row = newTile.y;
+	};
+
+	g.Food.prototype.updateDimensions = function() {
+		this.tile.updateDimensions();
+	};
+
+	g.Food.prototype.update = function() {
+		// 更新食物
+		this.tile.update();
+
+		if (this.birthTick > 0) {
+			this.birthTick -= this.birthTickChange;
+		} else if (this.birthTick < 0) {
+			this.birthTick = 0;
+    }
+    
+		this.parentState.grid.set(this.tile.col, this.tile.row, "food");
+	};
+
+	g.Food.prototype.render = function() {
+		this.tile.render();
+	};
+})();
+
+// 游玩状态
+
+(function() {
+	"use strict";
+
+	function StatePlay() {
+		this.name = "play";
+  }
+  
+	StatePlay.prototype.init = function() {
+		this.scoreElem = document.querySelector(".score");
+		this.stageElem = document.querySelector(".stage");
+		this.dimLong = 28;
+		this.dimShort = 16;
+		this.padding = 0.25;
+		this.boardTiles = new g.Group();
+		this.keys = {};
+		this.foodCreateTimeout = null;
+		this.score = 0;
+		this.scoreElem.innerHTML = '分数：' + this.score;
+		this.time = new g.Time();
+		this.getDimensions();
+		if (this.winWidth < this.winHeight) {
+			this.rows = this.dimLong;
+			this.cols = this.dimShort;
+		} else {
+			this.rows = this.dimShort;
+			this.cols = this.dimLong;
+		}
+		this.spacing = 1;
+		this.grid = new g.Grid(this.cols, this.rows);
+		this.resize();
+		this.createBoardTiles();
+		this.bindEvents();
+		this.snake = new g.Snake({
+			parentState: this
+		});
+		this.food = new g.Food({
+			parentState: this
+		});
+	};
+
+	StatePlay.prototype.getDimensions = function() {
+		this.winWidth = window.innerWidth;
+		this.winHeight = window.innerHeight;
+		this.activeWidth = this.winWidth - this.winWidth * this.padding;
+		this.activeHeight = this.winHeight - this.winHeight * this.padding;
+	};
+
+	StatePlay.prototype.resize = function() {
+		var _this = g.currentState();
+
+		_this.getDimensions();
+
+		_this.stageRatio = _this.rows / _this.cols;
+
+		if (_this.activeWidth > _this.activeHeight / _this.stageRatio) {
+			_this.stageHeight = _this.activeHeight;
+			_this.stageElem.style.height = _this.stageHeight + "px";
+			_this.stageWidth = Math.floor(_this.stageHeight / _this.stageRatio);
+			_this.stageElem.style.width = _this.stageWidth + "px";
+		} else {
+			_this.stageWidth = _this.activeWidth;
+			_this.stageElem.style.width = _this.stageWidth + "px";
+			_this.stageHeight = Math.floor(_this.stageWidth * _this.stageRatio);
+			_this.stageElem.style.height = _this.stageHeight + "px";
+		}
+
+		_this.tileWidth = ~~(_this.stageWidth / _this.cols);
+		_this.tileHeight = ~~(_this.stageHeight / _this.rows);
+		_this.dimAvg = (_this.activeWidth + _this.activeHeight) / 2;
+		_this.spacing = Math.max(1, ~~(_this.dimAvg * 0.0025));
+
+		_this.stageElem.style.marginTop = -_this.stageElem.offsetHeight / 2 + _this.headerHeight / 2 + "px";
+
+		_this.boardTiles.each("updateDimensions");
+		_this.snake !== undefined && _this.snake.updateDimensions();
+		_this.food !== undefined && _this.food.updateDimensions();
+	};
+
+	StatePlay.prototype.createBoardTiles = function() {
+		for (var y = 0; y < this.rows; y++) {
+			for (var x = 0; x < this.cols; x++) {
+				this.boardTiles.add(
+					new g.BoardTile({
+						parentState: this,
+						parentGroup: this.boardTiles,
+						col: x,
+						row: y,
+						x: x * this.tileWidth,
+						y: y * this.tileHeight,
+						w: this.tileWidth - this.spacing,
+						h: this.tileHeight - this.spacing
+					})
+				);
+			}
+		}
+	};
+
+	StatePlay.prototype.upOn = function() {
+		g.currentState().keys.up = 1;
+	};
+	StatePlay.prototype.downOn = function() {
+		g.currentState().keys.down = 1;
+	};
+	StatePlay.prototype.rightOn = function() {
+		g.currentState().keys.right = 1;
+	};
+	StatePlay.prototype.leftOn = function() {
+		g.currentState().keys.left = 1;
+	};
+	StatePlay.prototype.upOff = function() {
+		g.currentState().keys.up = 0;
+	};
+	StatePlay.prototype.downOff = function() {
+		g.currentState().keys.down = 0;
+	};
+	StatePlay.prototype.rightOff = function() {
+		g.currentState().keys.right = 0;
+	};
+	StatePlay.prototype.leftOff = function() {
+		g.currentState().keys.left = 0;
+	};
+
+	StatePlay.prototype.keydown = function(e) {
+		e.preventDefault();
+		var e = e.keyCode ? e.keyCode : e.which,
+			_this = g.currentState();
+		if (e === 38 || e === 87) {
+			_this.upOn();
+		}
+		if (e === 39 || e === 68) {
+			_this.rightOn();
+		}
+		if (e === 40 || e === 83) {
+			_this.downOn();
+		}
+		if (e === 37 || e === 65) {
+			_this.leftOn();
+		}
+	};
+
+	StatePlay.prototype.bindEvents = function() {
+		var _this = g.currentState();
+		window.addEventListener("keydown", _this.keydown, false);
+		window.addEventListener("resize", _this.resize, false);
+	};
+
+	StatePlay.prototype.step = function() {
+		this.boardTiles.each("update");
+		this.boardTiles.each("render");
+		this.snake.update();
+		this.snake.render();
+		this.food.update();
+		this.food.render();
+		this.time.update();
+
+	};
+
+	StatePlay.prototype.exit = function() {
+		window.removeEventListener("keydown", this.keydown, false);
+		window.removeEventListener("resize", this.resize, false);
+		this.stageElem.innerHTML = "";
+		this.grid.tiles = null;
+		this.time = null;
+	};
+
+	g.addState(new StatePlay());
+})();
+
+/*================================================
+
+Game
+
+================================================*/
+
+(function() {
+	"use strict";
+
+	g.config = {
+		title: "Snakely",
+		debug: window.location.hash == "#debug" ? 1 : 0,
+		state: "play"
+	};
+
+	g.setState(g.config.state);
+
+	g.time = new g.Time();
+
+	g.step = function() {
+		if (gameRunning) { // 添加这一行
+			requestAnimationFrame(g.step);
+			g.states[g.state].step();
+			g.time.update();
+		}
+	};
+
+	window.addEventListener("load", g.step, false);
+})();

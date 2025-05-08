@@ -1,171 +1,234 @@
+/* 全局样式 */
+
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Arial', sans-serif;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: #000;
+  height: 100%;
 }
 
 body {
-    background-color: #f5f5f5;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
+  background: #222;
+  background: radial-gradient(#333, #111);
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: #fff;
+  font: 100%/1.5 sans-serif;
+  overflow: hidden;
 }
 
-.game-container {
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    max-width: 600px;
-    width: 100%;
-    text-align: center;
+
+/* 菜单样式 */
+
+.menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.7);
 }
 
-h1 {
-    color: #333;
-    margin-bottom: 20px;
+.menu-title {
+  font-size: 3em;
+  margin-bottom: 1em;
+  text-shadow: 0 0 10px #fff;
 }
 
-.game-info {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    margin-bottom: 15px;
-    padding: 0 10px;
-    font-size: 18px;
+.menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
 }
 
-.score-container, .high-score-container, .score2-container {
-    margin: 5px 10px;
+.menu-button {
+  padding: 0.8em 1.5em;
+  font-size: 1.2em;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-.canvas-container {
-    position: relative;
-    margin: 0 auto;
-    width: 100%;
-    max-width: 400px;
+.menu-button:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
 }
 
-canvas {
-    display: block;
-    background-color: #e3f2fd;
-    border: 2px solid #2196F3;
-    border-radius: 5px;
-    width: 100%;
+/* 分数显示 */
+
+.score {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  font-weight: bold;
+  padding-top: 5px;
+  text-align: center;
 }
 
-button {
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    margin: 5px;
+.score-board {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 5;
 }
 
-button:hover {
-    background-color: #0d8af0;
+.score-board h3 {
+  margin: 0 0 5px 0;
+  text-align: center;
 }
 
-button:active {
-    background-color: #0c7cd5;
+.score-board p {
+  margin: 5px 0;
 }
 
-.controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 20px;
+/* 游戏区域 */
+
+.stage {
+  bottom: 0;
+  left: 0;
+  margin: auto;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
 }
 
-.controls-row {
-    display: flex;
-    justify-content: center;
+/* 方块样式 */
+
+.tile {
+  background: rgba(0, 0, 0, 0.15);
+  position: absolute;
+  transition-property: background, box-shadow, opacity, transform;
+  transform: translateZ(0);
+  transition-duration: 3000ms;
 }
 
-#pauseButton {
-    background-color: #ff9800;
+.tile:before {
+  bottom: 0;
+  content: "";
+  height: 0;
+  left: 0;
+  margin: auto;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 0;
+  transition: opacity 300ms;
 }
 
-#pauseButton:hover {
-    background-color: #e68900;
+.tile.path:before {
+  opacity: 1;
 }
 
-#gameOverScreen,
-#startScreen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.9);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border-radius: 5px;
+.tile.up:before {
+  border-bottom: 4px inset rgba(255, 255, 255, 0.15);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
 }
 
-#pauseIndicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-size: 20px;
-    pointer-events: none;
+.tile.down:before {
+  border-top: 4px inset rgba(255, 255, 255, 0.15);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
 }
 
+.tile.left:before {
+  border-right: 4px inset rgba(255, 255, 255, 0.15);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.tile.right:before {
+  border-left: 4px inset rgba(255, 255, 255, 0.15);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+@media (max-width: 900px),
+(max-height: 900px) {
+
+  .tile.up:before,
+  .tile.down:before,
+  .tile.left:before,
+  .tile.right:before {
+    border-width: 3px;
+  }
+}
+
+@media (max-width: 500px),
+(max-height: 500px) {
+
+  .tile.up:before,
+  .tile.down:before,
+  .tile.left:before,
+  .tile.right:before {
+    border-width: 2px;
+  }
+}
+
+.tile.pressed {
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+  transition-duration: 0ms;
+}
+
+/*
+#game-over-popup 选择器用于定义游戏结束弹窗的样式。以下是各属性的含义：
+- position: fixed：将弹窗固定在页面上，不随滚动条滚动。
+- top: 50%; left: 50%：将弹窗的左上角定位到页面中心。
+- transform: translate(-50%, -50%) scale(0.8)：将弹窗从中心位置偏移回自身尺寸的一半，使其真正居中，并初始缩放为 0.8 倍。
+- background: rgba(0, 0, 0, 0.8)：设置弹窗的背景为半透明黑色。
+- text-align: center：设置弹窗内文本居中对齐。
+- z-index: 100：设置弹窗的层级为 100，确保它显示在其他元素之上。
+- opacity: 0：初始时弹窗透明度为 0，即不可见。
+- transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out：设置弹窗透明度和缩放的过渡效果，持续时间为 0.3 秒，缓动函数为 ease-in-out。
+*/
+#game-over-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: rgba(0, 0, 0, 1);
+  text-align: center;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+/*
+#game-over-popup:not(.hidden) 选择器用于选择没有 hidden 类的游戏结束弹窗。
+当弹窗没有 hidden 类时，将其透明度设置为 1（完全可见），并缩放为原始大小。
+*/
+#game-over-popup:not(.hidden) {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/*
+.hidden 选择器用于定义隐藏元素的样式。
+- display: none：将元素从文档流中移除，不显示。
+- opacity: 0：设置元素透明度为 0，即不可见。
+- transform: translate(-50%, -50%) scale(0.8)：将元素从中心位置偏移回自身尺寸的一半，并缩放为 0.8 倍。
+*/
 .hidden {
-    display: none !important;
-}
-
-.instructions {
-    margin-top: 20px;
-    text-align: left;
-    padding: 0 10px;
-}
-
-.instructions h3 {
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.instructions ul {
-    list-style-position: inside;
-    color: #555;
-}
-
-.instructions li {
-    margin-bottom: 5px;
-}
-
-/* 响应式设计 */
-@media (max-width: 480px) {
-    .game-info {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .score-container, .high-score-container {
-        margin-bottom: 5px;
-    }
-    
-    button {
-        padding: 8px 16px;
-        font-size: 14px;
-    }
-    
-    .instructions {
-        font-size: 14px;
-    }
+  display: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
 }

@@ -1,72 +1,44 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>贪吃蛇游戏</title>
+<HEAD>
+    <TITLE>贪吃蛇</TITLE>
+    <meta charset="utf-8" />
+    <META NAME="Generator" CONTENT="EditPlus">
+    <META NAME="Author" CONTENT="">
+    <META NAME="Keywords" CONTENT="">
+    <META NAME="Description" CONTENT="">
     <link rel="stylesheet" href="style.css">
-</head>
+</HEAD>
 
-<body>
-    <div class="game-container">
-        <h1>贪吃蛇游戏</h1>
-
-        <div class="game-info">
-            <div class="score-container">
-                <span>分数：</span>
-                <span id="score">0</span>
-            </div>
-            <div class="high-score-container">
-                <span>最高分：</span>
-                <span id="highScore">0</span>
-            </div>
-        </div>
-
-        <div class="canvas-container">
-            <canvas id="gameCanvas" width="400" height="400"></canvas>
-            <div id="gameOverScreen" class="hidden">
-                <h2>游戏结束</h2>
-                <p>你的分数: <span id="finalScore">0</span></p>
-                <button id="restartButton">重新开始</button>
-            </div>
-            <div id="startScreen">
-                <h2>贪吃蛇</h2>
-                <p>使用方向键(←↑↓→)控制蛇的移动</p>
-                <button id="startButton">开始游戏</button>
-            </div>
-            <div id="pauseIndicator" class="hidden">已暂停</div>
-        </div>
-
-        <div class="controls">
-            <div class="controls-row">
-                <button id="upButton">↑</button>
-            </div>
-            <div class="controls-row">
-                <button id="leftButton">←</button>
-                <button id="pauseButton">暂停</button>
-                <button id="rightButton">→</button>
-            </div>
-            <div class="controls-row">
-                <button id="downButton">↓</button>
-            </div>
-        </div>
-
-        <div class="instructions">
-            <h3>游戏说明：</h3>
-            <ul>
-                <li>使用方向键或屏幕按钮控制蛇的移动</li>
-                <li>引导蛇吃掉红色食物</li>
-                <li>避免撞到自己</li>
-                <li>按空格键可开始/暂停/继续游戏</li>
-                <li>点击"切换双人模式"可以切换单/双人模式</li>
-                <li>双人模式下，玩家1使用方向键，玩家2使用WASD键</li>
-                <li>点击"自定义键位"可以自定义控制按键</li>
-            </ul>
+<BODY>
+    <div class="menu" id="menu">
+        <h1 class="menu-title">贪吃蛇</h1>
+        <div class="menu-options">
+            <button class="menu-button" onclick="startGame('normal')">普通模式</button>
+            <button class="menu-button" onclick="startGame('challenge')">挑战模式</button>
         </div>
     </div>
 
-    <script src="script.js"></script>
-</body>
+    <div class="score-board" id="scoreBoard" style="display: none;">
+        <h3>分数统计</h3>
+        <p>当前分数: <span id="currentScore">0</span></p>
+        <p>最高分数: <span id="highScore">0</span></p>
+        <p>模式: <span id="gameMode">-</span></p>
+    </div>
 
-</html>
+    <div class="score">分数：0</div>
+    <div id="game-over-popup" class="hidden">
+        <h2>游戏结束</h2>
+        <p>本次得分: <span id="current-score-popup"></span></p>
+        <p>历史最高得分: <span id="high-score-popup"></span></p>
+        <button class="menu-button" onclick="location.reload()">返回主界面</button>
+    </div>
+    <div class="stage"></div>
+
+    <script src="script.js"></script>
+    上下左右控制（键盘操作）<br>
+    可以撞墙，但不可以撞到自己<br>
+</BODY>
+
+</HTML>
