@@ -755,7 +755,7 @@ Snake Entity
 				// 只在挑战模式下更新速度
 				if (gameMode === 'challenge') {
 					if (this.updateTickMax - this.updateTickChange > this.updateTickLimit) {
-						this.updateTickMax -= this.updateTickChange;
+						this.updateTickMax -= this.updateTickChange*10;
 					}
 				}
 				this.parentState.score = this.parentState.score + 52;

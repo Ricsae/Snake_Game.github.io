@@ -5,7 +5,6 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>舒尔特方格游戏</title>
-	<!-- css -->
 	<style>
 		* {
 			margin: 0;
@@ -229,7 +228,9 @@
 	<div class="container">
 		<h1>舒尔特方格游戏</h1>
 		<div class="introduction">
-			<p> 舒尔特方格是一种注意力训练游戏，由德国心理学家舒尔特发明。游戏规则简单：在方格中随机填入数字，玩家需要按顺序找出这些数字。 </p>
+			<p>
+				舒尔特方格是一种注意力训练游戏，由德国心理学家舒尔特发明。<br>游戏规则简单：在方格中随机填入数字，玩家需要按顺序找出这些数字。
+			</p>
 			<p>这个游戏可以训练：</p>
 			<ul>
 				<li>注意力集中能力</li>
@@ -254,11 +255,11 @@
 		</div>
 		<div id="grid" class="grid"></div>
 		<div class="button-container">
+			<button onclick="window.location.href='index.html'">返回主页</button>
 			<button id="start-btn">开始游戏</button>
 			<button id="reset-btn">重新开始</button>
 		</div>
 	</div>
-	<!-- js -->
 	<script>
 		class SchulteGame {
 			constructor() {
