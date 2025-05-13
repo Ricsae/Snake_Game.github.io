@@ -12,6 +12,29 @@
 			box-sizing: border-box;
 		}
 
+		.overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			z-index: 10;
+			background: rgb(0, 0, 0);
+			opacity: 0;
+			/* 初始透明度为 0 */
+			transition: opacity 1s ease-in-out;
+			/* 添加透明度过渡效果 */
+		}
+
+		.overlay.fade-out {
+			opacity: 1;
+			/* 透明度降为 1 */
+		}
+
 		body {
 			font-family: Arial, sans-serif;
 			background-color: #f0f2f5;
@@ -255,12 +278,25 @@
 		</div>
 		<div id="grid" class="grid"></div>
 		<div class="button-container">
-			<button onclick="window.location.href='index.html'">返回主页</button>
-			<button id="start-btn">开始游戏</button>
+			<button onclick="showOverlayAndRedirect()">返回主页</button>
+			<button id=" start-btn">开始游戏</button>
 			<button id="reset-btn">重新开始</button>
 		</div>
 	</div>
 	<script>
+		function showOverlayAndRedirect() {
+			const overlay = document.createElement('div');
+			overlay.classList.add('overlay');
+			document.body.appendChild(overlay);
+
+			setTimeout(() => {
+				overlay.classList.add('fade-out');
+			}, 10);
+
+			setTimeout(() => {
+				window.location.href = 'index.html';
+			}, 1000);
+		}
 		class SchulteGame {
 			constructor() {
 				this.grid = document.getElementById('grid');
