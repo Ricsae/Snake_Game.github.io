@@ -21,6 +21,25 @@ body {
   overflow: hidden;
 }
 
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  background: rgba(255, 255, 255);
+  opacity: 0; /* 初始透明度为 0 */
+  transition: opacity 1s ease-in-out; /* 添加透明度过渡效果 */
+}
+
+.overlay.fade-out {
+  opacity: 1; /* 透明度降为 1 */
+}
 
 /* 菜单样式 */
 

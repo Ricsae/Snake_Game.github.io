@@ -251,7 +251,7 @@
 		</div>
 		<div class="game-info">
 			<span>当前数字: <span id="current-number">1</span></span>
-			<span>用时: <span id="timer">0</span>秒</span>
+			<span>用时: <span id="timer">0.000</span>秒</span>
 		</div>
 		<div id="grid" class="grid"></div>
 		<div class="button-container">
@@ -275,8 +275,10 @@
 				this.gameStarted = false;
 				this.timerInterval = null;
 				this.startTime = null;
-				this.initializeEventListeners()
+				this.lastTime = 0;
+				this.initializeEventListeners();
 			}
+
 			initializeEventListeners() {
 				this.startBtn.addEventListener('click', () => this.startGame());
 				this.resetBtn.addEventListener('click', () => this.resetGame());
@@ -284,32 +286,34 @@
 					button.addEventListener('click', () => {
 						this.setActiveSize(button);
 						if (this.gameStarted) {
-							this.startGame()
+							this.startGame();
 						}
-					})
-				})
+					});
+				});
 			}
+
 			setActiveSize(activeButton) {
 				this.sizeButtons.forEach((button) => {
-					button.classList.remove('active')
+					button.classList.remove('active');
 				});
-				activeButton.classList.add('active')
+				activeButton.classList.add('active');
 			}
+
 			getGridSize() {
 				const activeButton = document.querySelector('.size-btn.active');
-				return parseInt(activeButton.dataset.size)
+				return parseInt(activeButton.dataset.size);
 			}
+
 			generateNumbers() {
 				const size = this.getGridSize();
 				const totalNumbers = size * size;
-				this.numbers = Array.from({
-					length: totalNumbers
-				}, (_, i) => i + 1);
+				this.numbers = Array.from({ length: totalNumbers }, (_, i) => i + 1);
 				for (let i = this.numbers.length - 1; i > 0; i--) {
 					const j = Math.floor(Math.random() * (i + 1));
-					[this.numbers[i], this.numbers[j]] = [this.numbers[j], this.numbers[i]]
+					[this.numbers[i], this.numbers[j]] = [this.numbers[j], this.numbers[i]];
 				}
 			}
+
 			createGrid() {
 				const size = this.getGridSize();
 				this.grid.style.gridTemplateColumns = `repeat(${size},1fr)`;
@@ -320,9 +324,10 @@
 					cell.textContent = number;
 					cell.dataset.number = number;
 					cell.addEventListener('click', () => this.handleCellClick(cell));
-					this.grid.appendChild(cell)
-				})
+					this.grid.appendChild(cell);
+				});
 			}
+
 			startGame() {
 				this.generateNumbers();
 				this.createGrid();
@@ -331,48 +336,77 @@
 				this.startBtn.disabled = true;
 				this.resetBtn.disabled = false;
 				this.sizeButtons.forEach((button) => {
-					button.disabled = false
+					button.disabled = false;
 				});
-				this.startTime = Date.now();
+				this.startTime = performance.now();
+				this.lastTime = this.startTime;
 				this.updateTimer();
-				this.timerInterval = setInterval(() => this.updateTimer(), 1000);
-				this.introduction.style.display = 'none'
+				this.timerInterval = requestAnimationFrame(() => this.animateTimer());
+				this.introduction.style.display = 'none';
+				this.currentNumber.textContent = '1'; // 确保重新开始时显示1
 			}
+
 			resetGame() {
-				this.startGame()
+				if (this.timerInterval) {
+					cancelAnimationFrame(this.timerInterval);
+				}
+				this.startGame();
 			}
+
+			animateTimer() {
+				if (!this.gameStarted) return;
+
+				this.updateTimer();
+				this.timerInterval = requestAnimationFrame(() => this.animateTimer());
+			}
+
 			updateTimer() {
-				const seconds = Math.floor((Date.now() - this.startTime) / 1000);
-				this.timer.textContent = seconds
+				if (!this.startTime) return;
+
+				const now = performance.now();
+				const elapsedTime = (now - this.startTime) / 1000; // 转换为秒，保留毫秒
+				this.timer.textContent = elapsedTime.toFixed(3); // 显示三位小数
+				this.lastTime = now;
 			}
+
 			handleCellClick(cell) {
 				if (!this.gameStarted) return;
+
 				const number = parseInt(cell.dataset.number);
 				if (number === this.currentIndex) {
 					cell.classList.add('correct');
 					this.currentIndex++;
-					this.currentNumber.textContent = this.currentIndex;
+
+					// 当点击到最后一个数字时
 					if (this.currentIndex > this.numbers.length) {
-						this.gameWon()
+						this.currentNumber.textContent = '已完成';
+						this.gameWon();
+					} else {
+						this.currentNumber.textContent = this.currentIndex;
 					}
 				} else {
 					cell.classList.add('wrong');
 					setTimeout(() => {
-						cell.classList.remove('wrong')
-					}, 500)
+						cell.classList.remove('wrong');
+					}, 500);
 				}
 			}
+
 			gameWon() {
-				clearInterval(this.timerInterval);
+				cancelAnimationFrame(this.timerInterval);
 				this.gameStarted = false;
 				this.startBtn.disabled = false;
 				this.resetBtn.disabled = false;
 				this.sizeButtons.forEach((button) => {
-					button.disabled = false
+					button.disabled = false;
 				});
-				alert(`恭喜你完成游戏！用时：${this.timer.textContent}秒`)
+
+				// 使用游戏结束模态框替代alert
+				const finalTime = parseFloat(this.timer.textContent).toFixed(3);
+				alert(`恭喜你完成游戏！用时：${finalTime}秒`);
 			}
 		}
+
 		const game = new SchulteGame();
 	</script>
 </body>

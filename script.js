@@ -10,6 +10,24 @@ function startGame(mode) {
 	g.setState("play");
 }
 
+// 转网页的过渡动画
+function showOverlayAndRedirect() {
+	// 创建白色幕布元素
+	const overlay = document.createElement('div');
+	overlay.classList.add('overlay');
+	document.body.appendChild(overlay);
+  
+	// 等待一小段时间后添加 fade-out 类，触发过渡效果
+	setTimeout(() => {
+	  overlay.classList.add('fade-out');
+	}, 10);
+  
+	// 等待过渡效果完成后执行跳转
+	setTimeout(() => {
+	  window.location.href = '舒尔特方格.html';
+	}, 1000); // 假设过渡效果持续1秒
+}
+
 function updateScoreBoard(current) {
 	document.getElementById('currentScore').textContent = current;
 	if (current > highScore) {
